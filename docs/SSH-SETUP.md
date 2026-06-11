@@ -2,9 +2,9 @@
 
 ## 🌐 Debug Site (Cole saídas aqui)
 
-**URL:** http://localhost:8888
+**🔗 LINK PÚBLICO:** https://crumpet-scouring-self.ngrok-free.dev
 
-Cole a saída dos comandos PowerShell aqui para debug rápido.
+Abra esse link e cole a saída dos comandos PowerShell do Windows!
 
 ---
 
