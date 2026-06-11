@@ -26,7 +26,18 @@ VNC_PORT="${2:-5900}"
 BRIDGE=""
 
 # ISO do Windows 10
-WIN_ISO=$(ls "$ISO_DIR"/*.iso 2>/dev/null | head -1)
+WIN_ISO_RAW=$(ls "$ISO_DIR"/*.iso 2>/dev/null | head -1)
+if [ -n "$WIN_ISO_RAW" ]; then
+    # Copia para libvirt/images se necessário (permissões)
+    WIN_ISO="/var/lib/libvirt/images/$(basename "$WIN_ISO_RAW")"
+    if [ ! -f "$WIN_ISO" ]; then
+        info "Copiando ISO para $WIN_ISO..."
+        sudo cp "$WIN_ISO_RAW" "$WIN_ISO"
+        sudo chown libvirt-qemu:kvm "$WIN_ISO"
+    fi
+else
+    WIN_ISO=""
+fi
 VIRTIO_ISO="/var/lib/libvirt/images/virtio-win.iso"
 
 # ─── Core count físico ───
