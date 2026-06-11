@@ -1,109 +1,78 @@
-# 🔐 SSH Setup — Configuração e Verificação
+# 🔐 SSH Setup — Configuração e Diagnóstico
 
-> Execute estes comandos **no PowerShell como Administrador** dentro do Windows 10 para verificar e ativar o OpenSSH.
+> Execute estes comandos **no PowerShell como Administrador** dentro do Windows 10.
 
 ---
 
-## 📋 Passo 1: Verificar se OpenSSH está Instalado e Rodando
+## ✅ Status Atual (Confirmado)
+
+- ✅ `Get-Service sshd` → **Running**
+- ✅ `netstat -an | findstr :22` → **LISTENING**
+- ✅ `ssh ufrb@localhost` → **Conecta e pede senha**
+
+---
+
+## ❌ Problema Identificado
+
+**Port Forwarding do QEMU está funcionando**, mas o **handshake SSH falha** quando conectando de fora da VM.
+
+---
+
+## 📋 Passo 1: Verificar sshd_config
 
 ```powershell
-# Verificar status do serviço SSH
-Get-Service sshd
+# Verificar configuração do SSH Server
+Get-Content C:\ProgramData\ssh\sshd_config | findstr -i 'ListenAddress\|PasswordAuthentication'
 ```
 
 **Saída esperada:**
 
 ```
-Status   Name               DisplayName
-------   ----               -----------
-Running  sshd               OpenSSH SSH Server
+PasswordAuthentication yes
 ```
 
-Se aparecer `Stopped`, execute:
+Se aparecer `PasswordAuthentication no`, execute:
 
 ```powershell
-Start-Service sshd
-Set-Service -Name sshd -StartupType Automatic
+# Habilitar autenticação por senha
+(Get-Content C:\ProgramData\ssh\sshd_config) -replace 'PasswordAuthentication no','PasswordAuthentication yes' | Set-Content C:\ProgramData\ssh\sshd_config
+Restart-Service sshd
 ```
 
 ---
 
-## 📋 Passo 2: Verificar se a Porta 22 está Aberta
-
-```powershell
-# Verificar se SSH está escutando na porta 22
-netstat -an | findstr :22
-```
-
-**Saída esperada:**
-
-```
-  TCP    0.0.0.0:22             0.0.0.0:0              LISTENING
-  TCP    [::]:22                [::]:0                 LISTENING
-```
-
-Se **não aparecer**, o SSH não está configurado corretamente.
-
----
-
-## 📋 Passo 3: Verificar Firewall
+## 📋 Passo 2: Verificar Firewall
 
 ```powershell
 # Verificar regras de firewall do SSH
-Get-NetFirewallRule -DisplayName '*SSH*' | select DisplayName,Enabled,Action
+netsh advfirewall firewall show rule name=all | findstr -i 'SSH.*22'
 ```
 
-**Saída esperada:**
+**Saída esperada:** Deve mostrar a regra permitindo conexões na porta 22.
 
-```
-DisplayName          Enabled Action
------------          ------- ------
-OpenSSH-Server-In-TCP   True Allow
-```
-
-Se não aparecer ou `Enabled` for `False`, execute:
+Se não aparecer, execute:
 
 ```powershell
-New-NetFirewallRule -Name "SSH-22" -DisplayName "OpenSSH SSH Server (22)" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+New-NetFirewallRule -Name "SSH-22-In" -DisplayName "OpenSSH SSH Server (22)" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 -RemoteAddress Any
 ```
 
 ---
 
-## 📋 Passo 4: Descobrir o IP da VM
+## 📋 Passo 3: Testar SSH de IP Externo (dentro do Windows)
 
 ```powershell
-# Verificar IP da VM
-ipconfig
+# Testar conexão SSH de outro IP (simulando conexão externa)
+ssh ufrb@10.0.2.2
 ```
 
-**Copie o IP** que aparecer (geralmente `10.0.2.15`) e envie para o agente.
+Se conectar, o problema é de rede/firewall.
+Se falhar, o problema é no sshd_config.
 
 ---
 
-## 📋 Passo 5: Testar SSH Localmente (dentro do Windows)
+## 🌐 Conexão via Host (Port Forwarding)
 
-```powershell
-# Testar SSH localmente
-ssh ufrb@localhost
-```
-
-Se pedir senha ou conectar, o SSH está funcionando.
-
----
-
-## 🔐 Após Confirmar que SSH Está Rodando
-
-Me envie:
-
-1. ✅ Saída do `Get-Service sshd`
-2. ✅ Saída do `netstat -an | findstr :22`
-3. ✅ O **IP** do `ipconfig`
-
----
-
-## 🌐 Conexão via Host (Port Forwarding Configurado)
-
-Uma vez que o SSH estiver rodando dentro do Windows, conecte do host via:
+Uma vez que o SSH aceitar conexões externas, conecte do host via:
 
 ```bash
 # SSH
@@ -114,6 +83,23 @@ winrs -r:http://localhost:5985 -u:ufrb hostname
 
 # RDP (porta 3389)
 rdesktop localhost:3389
+```
+
+---
+
+## 🔧 Comandos de Correção Rápida
+
+### Se PasswordAuthentication estiver desabilitado:
+
+```powershell
+(Get-Content C:\ProgramData\ssh\sshd_config) -replace '#*PasswordAuthentication.*','PasswordAuthentication yes' | Set-Content C:\ProgramData\ssh\sshd_config
+Restart-Service sshd
+```
+
+### Se firewall estiver bloqueando:
+
+```powershell
+New-NetFirewallRule -Name "SSH-22-In" -DisplayName "SSH Server" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
 ```
 
 ---
