@@ -6,26 +6,64 @@
 
 ---
 
-## ✅ Status
+## ✅ Status Atual
 
 | Item | Status |
 |------|--------|
-| OpenSSH | ✅ Running |
-| Porta 22 | ✅ LISTENING |
-| Firewall 22 | ✅ Configurado |
+| OpenSSH instalado | ✅ Running |
+| Porta 22 ouvindo | ❌ **NÃO** (Connection refused) |
+| Firewall porta 22 | ✅ Configurado |
+| Conexão SSH localhost | ❌ Connection refused |
 
 ---
 
-## 📋 Verificar
+## 📋 Comandos Executados
 
+### 1. Verificar log do SSH
 ```powershell
-Get-Content C:\ProgramData\ssh\sshd_config | findstr PasswordAuthentication
 Get-Content C:\ProgramData\ssh\logs\sshd.log -Tail 20
+# Erro: Arquivo não existe
+```
+
+### 2. Testar SSH localhost
+```powershell
+ssh -p 2222 ufrb@localhost
+# Erro: Connection refused
 ```
 
 ---
 
-## 🔐 Conectar (quando pronto)
+## 🔧 Diagnóstico
+
+**Problema:** SSH Server está "Running" mas **não está escutando** na porta 22.
+
+**Possíveis causas:**
+1. `sshd_config` tem `ListenAddress 127.0.0.1` (apenas localhost)
+2. Serviço SSH não reiniciou após mudanças
+3. Windows OpenSSH requer configuração adicional
+
+---
+
+## 📋 Próximos Comandos
+
+### 1. Verificar sshd_config
+```powershell
+Get-Content C:\ProgramData\ssh\sshd_config
+```
+
+### 2. Verificar onde SSH está escutando
+```powershell
+netstat -an | findstr LISTENING
+```
+
+### 3. Reiniciar serviço SSH
+```powershell
+Restart-Service sshd
+```
+
+---
+
+## 🔐 Conectar (quando SSH aceitar)
 
 ```bash
 ssh -p 2222 ufrb@localhost
