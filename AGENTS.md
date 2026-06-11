@@ -118,10 +118,18 @@ VNC:             localhost:5900
 
 - ✅ Repo criado e enviado para GitHub (público)
 - ✅ ISO oficial Windows 10 22H2 PT-BR baixada (5.5GB)
-- ✅ ISO copiada para `iso/`
-- ✅ VirtIO ISO presente (`/var/lib/libvirt/images/virtio-win.iso`)
+- ✅ ISO copiada para `/var/lib/libvirt/images/`
+- ✅ VirtIO ISO presente (195MB)
+- ✅ VM `winmaster-base` **CRIADA E RODANDO** (Id: 5)
+- ✅ Disco de 60GB criado e montado
+- ✅ VNC ativo em `0.0.0.0:5900`
+- ✅ Scripts de preparação criados:
+  - `configure-winrm.ps1` — habilita WinRM HTTP 5985
+  - `enable-remote-desktop.ps1` — habilita RDP 3389
+  - `test-connectivity.sh` — testa portas
+  - `get-vm-ip.sh` — descobre IP da VM
 - ✅ AGENTS.md atualizado (este arquivo)
-- 🔄 **Próximo passo:** Executar `build-vm.sh` para criar a VM
+- 🔄 **Status:** Windows 10 instalando (~14% em 14:45)
 
 ---
 
@@ -140,11 +148,35 @@ VNC:             localhost:5900
 
 ## 🚀 Próximos Passos Imediatos
 
-1. Executar `sudo ./scripts/build-vm.sh` → cria e inicia a VM
-2. Acessar VNC → verificar se Windows está instalando
-3. Aguardar instalação + auto-logon
-4. Configurar WinRM, programas, etc.
-5. Documentar o que foi feito no Windows para o AGENTS.md
+1. ✅ VM rodando — aguardar instalação do Windows 10 terminar
+2. ✅ Acessar VNC (`vncviewer localhost:5900`) — você já está visualizando
+3. ⏳ Aguardar auto-logon como Administrador (senha: `Admin123!`)
+4. ⏳ Executar scripts PowerShell:
+   - `configure-winrm.ps1` → WinRM HTTP 5985
+   - `enable-remote-desktop.ps1` → RDP 3389
+5. ⏳ Descobrir IP da VM (`ipconfig` no Windows)
+6. ⏳ Testar conectividade com `test-connectivity.sh <IP>`
+7. ⏳ Instalar programas institucionais
+8. ⏳ Otimizar para HD + sysprep
+9. ⏳ Capturar via FOG
+
+## 📝 Scripts Prontos para Execução
+
+Assim que o Windows subir e você fizer login:
+
+```powershell
+# No PowerShell como Administrador:
+.\configure-winrm.ps1
+.\enable-remote-desktop.ps1
+```
+
+```bash
+# No host Linux (descobrir IP):
+./scripts/get-vm-ip.sh
+
+# Testar portas:
+./scripts/test-connectivity.sh <IP-DA-VM>
+```
 
 ---
 
