@@ -12,12 +12,11 @@ Cole a saída dos comandos PowerShell aqui para debug rápido.
 
 **Status:** Requer cartão de crédito para TCP (conta free)
 
-**Token configurado:** `3F0OMBjhN28y182mMRuIPYL04PD_6V89VZw7WkFGV8zhUaepp`
-
 **Para ativar túnel TCP:**
 1. Acesse: https://dashboard.ngrok.com/settings#id-verification
 2. Adicione cartão (não é cobrado)
-3. Execute: `ngrok tcp 2222`
+3. Configure seu token: `ngrok config add-authtoken SEU_TOKEN`
+4. Execute: `ngrok tcp 2222`
 
 ---
 
