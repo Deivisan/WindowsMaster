@@ -1,0 +1,97 @@
+# ─── Imagens de disco ───
+*.qcow2
+*.qcow2.bkp
+*.qcow2.old
+*.img
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+
+# ─── ISOs baixados ───
+*.iso
+iso/*.iso
+!iso/.gitkeep
+
+# ─── Arquivos grandes / mídia ───
+*.msi
+*.exe
+*.zip
+*.rar
+*.7z
+*.wim
+*.esd
+*.cab
+*.msu
+*.pkg
+
+# ─── NVRAM / UEFI vars ───
+*.fd
+*.vars
+*.nvram
+
+# ─── Sysprep / OOBE ───
+sysprep/
+Panther/
+unattend.xml
+autounattend.xml
+!autounattend/autounattend.xml
+
+# ─── Logs e temporários ───
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+*.bak
+logs/
+temp/
+work/
+
+# ─── Config sensível ───
+.env
+.env.*
+!env.template
+*.secret
+credenciais/
+chaves/
+*.pem
+*.key
+
+# ─── Dependências e builds ───
+node_modules/
+vendor/
+dist/
+build/
+target/
+__pycache__/
+*.pyc
+*.pyo
+
+# ─── Sistema ───
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# ─── Git ───
+*.orig
+*.rej
+.editorconfig
+.idea/
+.vscode/
+*.sublime-*
+
+# ─── Pacotes FOG capturados ───
+*.fog
+*.partimage
+*.partclone
+*.zst
+*.gz
+*.bz2
+
+# ─── Mantendo isolar ├──
+iso/.gitkeep
+autounattend/.gitkeep
+scripts/.gitkeep
+docs/.gitkeep
