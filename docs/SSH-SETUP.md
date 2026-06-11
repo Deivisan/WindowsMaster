@@ -6,95 +6,111 @@
 
 ---
 
-## 🎯 Objetivo
-
-Conseguir acesso SSH do host Linux → Windows VM via port forwarding QEMU.
-
----
-
 ## ✅ Status Atual
 
 | Item | Status |
 |------|--------|
 | OpenSSH instalado | ✅ Running |
-| Porta 22 ouvindo | ❌ **NÃO** (Connection refused) |
-| Firewall porta 22 | ✅ Configurado |
-| Restart-Service sshd | ✅ Executado |
-| ssh localhost:2222 | ❌ Connection refused |
+| Porta 22 ouvindo | ❌ Connection refused |
+| Tailscale | ✅ Conectado (100.82.252.113) |
+| SSH via Tailscale | ❌ Permission denied |
 
 ---
 
-## 📋 Script de Diagnóstico Completo
+## 📋 Comandos de Verificação (Execute no Windows)
 
-Execute este script **como Administrador** no PowerShell e cole **TODA a saída** no Debug Console:
-
+### 1. Testar SSH Local (dentro do Windows)
 ```powershell
-# Baixe e execute o script de diagnóstico completo
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Deivisan/WindowsMaster/main/shared/scripts/diagnose-ssh.ps1" -OutFile "$env:TEMP\diagnose-ssh.ps1"
-& "$env:TEMP\diagnose-ssh.ps1"
+ssh ufrb@localhost
 ```
 
-Ou execute manualmente os comandos abaixo:
+**O que observar:**
+- Conecta? Pede senha?
+- Se conectar → problema é de rede/Tailscale
+- Se falhar → problema é no SSH Server
 
-### 1. sshd_config Completo
+---
+
+### 2. Verificar PasswordAuthentication
 ```powershell
-Get-Content C:\ProgramData\ssh\sshd_config
+Get-Content C:\ProgramData\ssh\sshd_config | findstr PasswordAuthentication
 ```
 
-### 2. Onde SSH está Escutando
-```powershell
-netstat -an | findstr LISTENING
+**Saída esperada:**
+```
+PasswordAuthentication yes
 ```
 
-### 3. Logs do OpenSSH (Event Viewer)
+**Se aparecer `no` ou nada:**
 ```powershell
-Get-WinEvent -LogName "OpenSSH/Operational" -MaxEvents 30
-```
-
-### 4. Logs do sshd (arquivo)
-```powershell
-Get-Content C:\ProgramData\ssh\logs\sshd.log -Tail 50
-```
-
-### 5. Teste SSH Local
-```powershell
-ssh -o ConnectTimeout=3 ufrb@localhost "echo TEST_OK"
-```
-
-### 6. Informações de Rede
-```powershell
-ipconfig /all
-route print
+(Get-Content C:\ProgramData\ssh\sshd_config) -replace '#*PasswordAuthentication.*','PasswordAuthentication yes' | Set-Content C:\ProgramData\ssh\sshd_config
+Restart-Service sshd
 ```
 
 ---
 
-## 🔧 Hipóteses do Problema
+### 3. Verificar se ufrb está habilitado
+```powershell
+Get-LocalUser -Name "ufrb" | select Name,Enabled,PasswordLastSet
+```
 
-### Hipótese 1: QEMU/SLiRP NAT
-- VM está em rede NAT (10.0.2.x)
-- Host está em rede real (172.17.x.x)
-- **Port forwarding QEMU deve resolver** ✅ (já configurado)
+**Saída esperada:**
+```
+Name  Enabled PasswordLastSet
+----  ------- ---------------
+ufrb   True   [data da senha]
+```
 
-### Hipótese 2: sshd_config restrito
-- `ListenAddress 127.0.0.1` no sshd_config
-- SSH só aceita conexões locais
-
-### Hipótese 3: Windows Firewall
-- Regra existe mas não permite conexões de `10.0.2.2` (gateway QEMU)
-
-### Hipótese 4: sshd não escutando
-- Serviço "Running" mas processo não vinculado à porta 22
+**Se `Enabled` for `False`:**
+```powershell
+Enable-LocalUser -Name "ufrb"
+```
 
 ---
 
-## 🔐 Conexão Final
+### 4. Verificar se ufrb tem senha
+```powershell
+net user ufrb
+```
+
+**Procurar por:** `Password last set` (deve ter uma data, não "Never")
+
+---
+
+### 5. Verificar Permissões do SSH
+```powershell
+Get-Content C:\ProgramData\ssh\sshd_config | findstr -i 'AllowUsers\|AllowGroups\|DenyUsers'
+```
+
+**Se aparecer `AllowUsers` ou `DenyUsers`, adicione ufrb:**
+```powershell
+# Editar sshd_config e adicionar:
+# AllowUsers ufrb
+Restart-Service sshd
+```
+
+---
+
+### 6. Testar Login com Verbose (debug)
+```powershell
+ssh -vvv ufrb@localhost 2>&1 | findstr -i "password\|auth\|permission\|failed"
+```
+
+---
+
+## 🔐 Conectar via Tailscale
 
 ```bash
-ssh -p 2222 ufrb@localhost
+ssh ufrb@100.82.252.113
 ```
 
-Senha: `Ufrb@2026`
+Senha: `Meddi@2025`
+
+---
+
+## 📝 Cole a Saída Aqui
+
+Cole no Debug Console a saída dos comandos **1, 2 e 3** para diagnosticarmos!
 
 ---
 
