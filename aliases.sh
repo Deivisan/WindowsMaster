@@ -58,20 +58,6 @@ win10-info() {
 # ─── Função: win10-logs ───
 # Mostra logs do QEMU da VM
 win10-logs() {
-    echo "📜 Logs da VM (últimas 50 linhas):"
-    echo ""
     sudo journalctl -u libvirtd -n 50 --no-pager 2>/dev/null | grep -i winmaster || echo "  Logs não disponíveis"
 }
 
-echo "✅ Aliases do WindowsMaster carregados!"
-echo ""
-echo "   Comandos disponíveis:"
-echo "     win10              → Abre VNC otimizado"
-echo "     win10-status       → Status da VM"
-echo "     win10-start        → Inicia a VM"
-echo "     win10-stop         → Desliga a VM"
-echo "     win10-force-stop   → Força parada"
-echo "     win10-restart      → Reinicia a VM"
-echo "     win10-info         → Informações completas"
-echo "     win10-logs         → Logs do QEMU"
-echo ""
