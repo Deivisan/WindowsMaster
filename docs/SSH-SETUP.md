@@ -13,7 +13,8 @@
 | OpenSSH instalado | ✅ Running |
 | Porta 22 ouvindo | ❌ **NÃO** (Connection refused) |
 | Firewall porta 22 | ✅ Configurado |
-| Conexão SSH localhost | ❌ Connection refused |
+| Restart-Service sshd | ✅ Executado |
+| ssh localhost:2222 | ❌ Connection refused |
 
 ---
 
@@ -31,22 +32,34 @@ ssh -p 2222 ufrb@localhost
 # Erro: Connection refused
 ```
 
+### 3. Reiniciar serviço SSH
+```powershell
+Restart-Service sshd
+# ✅ Executado
+```
+
+### 4. Testar novamente após restart
+```powershell
+ssh -p 2222 ufrb@localhost
+# ❌ Ainda: Connection refused
+```
+
 ---
 
 ## 🔧 Diagnóstico
 
-**Problema:** SSH Server está "Running" mas **não está escutando** na porta 22.
+**Problema persistente:** SSH Server está "Running" mas **não escuta na porta 22**.
 
 **Possíveis causas:**
-1. `sshd_config` tem `ListenAddress 127.0.0.1` (apenas localhost)
-2. Serviço SSH não reiniciou após mudanças
-3. Windows OpenSSH requer configuração adicional
+1. `sshd_config` tem `ListenAddress` restrito
+2. Windows OpenSSH requer `sshd_config` específico
+3. Serviço precisa de configuração manual
 
 ---
 
 ## 📋 Próximos Comandos
 
-### 1. Verificar sshd_config
+### 1. Verificar sshd_config COMPLETO
 ```powershell
 Get-Content C:\ProgramData\ssh\sshd_config
 ```
@@ -56,9 +69,9 @@ Get-Content C:\ProgramData\ssh\sshd_config
 netstat -an | findstr LISTENING
 ```
 
-### 3. Reiniciar serviço SSH
+### 3. Verificar Event Viewer (logs do Windows)
 ```powershell
-Restart-Service sshd
+Get-WinEvent -LogName "OpenSSH/Operational" -MaxEvents 20
 ```
 
 ---
