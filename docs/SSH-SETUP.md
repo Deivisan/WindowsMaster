@@ -6,111 +6,80 @@
 
 ---
 
-## ✅ Status Atual
+## 📜 Histórico de Tentativas
+
+### Fase 1: QEMU Port Forwarding
+- ✅ Configurado hostfwd (porta 2222 → 22)
+- ✅ Porta 2222 ouvindo no host
+- ❌ SSH dentro do Windows: Connection refused
+- **Conclusão:** SSH Server não escutava na porta 22
+
+### Fase 2: Tailscale VPN
+- ✅ Windows conectado (IP: 100.82.252.113)
+- ✅ Conectividade VPN funcionando
+- ❌ SSH: Permission denied (publickey,password)
+- **Conclusão:** Senha rejeitada
+
+### Fase 3: Chaves SSH
+- ✅ Chave ed25519 gerada no Linux
+- ✅ Chave pública adicionada no Windows
+- ✅ `PubkeyAuthentication yes` configurado
+- ✅ Permissões do arquivo corretas
+- ❌ SSH: Permission denied (publickey)
+- **Conclusão:** Windows rejeita chave (possível problema de formato/encoding)
+
+---
+
+## ✅ Status Final
 
 | Item | Status |
 |------|--------|
 | OpenSSH instalado | ✅ Running |
 | Porta 22 ouvindo | ❌ Connection refused |
-| Tailscale | ✅ Conectado (100.82.252.113) |
+| Tailscale conectado | ✅ 100.82.252.113 |
+| Chave pública configurada | ✅ |
+| `PubkeyAuthentication` | ✅ yes |
+| Permissões authorized_keys | ✅ Corretas |
 | SSH via Tailscale | ❌ Permission denied |
 
 ---
 
-## 📋 Comandos de Verificação (Execute no Windows)
+## 🔧 Próximos Passos (para amanhã)
 
-### 1. Testar SSH Local (dentro do Windows)
+### 1. Verificar logs do SSH Server
 ```powershell
-ssh ufrb@localhost
+Get-Content C:\ProgramData\ssh\logs\sshd.log -Tail 50
 ```
 
-**O que observar:**
-- Conecta? Pede senha?
-- Se conectar → problema é de rede/Tailscale
-- Se falhar → problema é no SSH Server
-
----
-
-### 2. Verificar PasswordAuthentication
+### 2. Verificar Event Viewer
 ```powershell
-Get-Content C:\ProgramData\ssh\sshd_config | findstr PasswordAuthentication
+Get-WinEvent -LogName "OpenSSH/Operational" -MaxEvents 30
 ```
 
-**Saída esperada:**
-```
-PasswordAuthentication yes
-```
-
-**Se aparecer `no` ou nada:**
-```powershell
-(Get-Content C:\ProgramData\ssh\sshd_config) -replace '#*PasswordAuthentication.*','PasswordAuthentication yes' | Set-Content C:\ProgramData\ssh\sshd_config
-Restart-Service sshd
-```
-
----
-
-### 3. Verificar se ufrb está habilitado
-```powershell
-Get-LocalUser -Name "ufrb" | select Name,Enabled,PasswordLastSet
-```
-
-**Saída esperada:**
-```
-Name  Enabled PasswordLastSet
-----  ------- ---------------
-ufrb   True   [data da senha]
-```
-
-**Se `Enabled` for `False`:**
-```powershell
-Enable-LocalUser -Name "ufrb"
-```
-
----
-
-### 4. Verificar se ufrb tem senha
-```powershell
-net user ufrb
-```
-
-**Procurar por:** `Password last set` (deve ter uma data, não "Never")
-
----
-
-### 5. Verificar Permissões do SSH
-```powershell
-Get-Content C:\ProgramData\ssh\sshd_config | findstr -i 'AllowUsers\|AllowGroups\|DenyUsers'
-```
-
-**Se aparecer `AllowUsers` ou `DenyUsers`, adicione ufrb:**
-```powershell
-# Editar sshd_config e adicionar:
-# AllowUsers ufrb
-Restart-Service sshd
-```
-
----
-
-### 6. Testar Login com Verbose (debug)
-```powershell
-ssh -vvv ufrb@localhost 2>&1 | findstr -i "password\|auth\|permission\|failed"
-```
-
----
-
-## 🔐 Conectar via Tailscale
-
+### 3. Testar com chave RSA (mais compatível)
 ```bash
-ssh ufrb@100.82.252.113
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/winmaster-rsa -N ""
+# Copiar chave pública para Windows
 ```
 
-Senha: `Meddi@2025`
+### 4. Verificar formato do authorized_keys
+```powershell
+# Verificar encoding (deve ser UTF-8)
+Get-Content "$env:USERPROFILE\.ssh\authorized_keys" -Encoding UTF8
+```
+
+### 5. Verificar line endings
+```powershell
+# Converter CRLF para LF se necessário
+(Get-Content "$env:USERPROFILE\.ssh\authorized_keys") -replace "`r`n","`n" | Set-Content "$env:USERPROFILE\.ssh\authorized_keys" -NoNewline
+```
 
 ---
 
-## 📝 Cole a Saída Aqui
+## 📁 Arquivos Relacionados
 
-Cole no Debug Console a saída dos comandos **1, 2 e 3** para diagnosticarmos!
+- `shared/scripts/diagnose-ssh.ps1` — Script de diagnóstico completo
+- `shared/scripts/win10-configure-all.ps1` — Configuração inicial
 
 ---
 

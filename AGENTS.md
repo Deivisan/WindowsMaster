@@ -48,11 +48,20 @@ WindowsMaster/
 │   ├── start-vm.sh            ← Inicia VM
 │   ├── stop-vm.sh             ← Para VM
 │   ├── status.sh              ← Status da VM
-│   └── vnc.sh                 ← Conecta via VNC
+│   ├── vnc.sh                 ← Conecta via VNC
+│   └── setup-shared-folder.sh ← Configura VirtIO-9P
+├── shared/                    ← Pasta montada no Windows via 9P
+│   ├── scripts/               ← .ps1 (WinRM, RDP, SSH, etc)
+│   ├── logs/
+│   ├── backups/
+│   └── configs/
+├── docs/
+│   └── SSH-SETUP.md           ← Histórico de debug SSH
 ├── iso/                       ← ISOs (gitignorado)
-│   └── Win10_22H2_BrazilianPortuguese_x64v1.iso  ← ISO oficial 5.5GB
-├── docs/                      ← Documentação técnica futura
-└── .git/                      ← Git
+│   └── Win10_22H2_BrazilianPortuguese_x64v1.iso
+├── AGENTS.md
+├── README.md
+└── .git/
 ```
 
 ---
@@ -69,7 +78,7 @@ WindowsMaster/
 | Firmware | UEFI + Secure Boot |
 | TPM | 2.0 emulado |
 | Rede | SLiRP (user-mode NAT) |
-| ISO | `/home/deivi/Projetos/WindowsMaster/iso/Win10_22H2_BrazilianPortuguese_x64v1.iso` |
+| ISO | `/var/lib/libvirt/images/Win10_22H2_BrazilianPortuguese_x64v1.iso` |
 | VirtIO | `/var/lib/libvirt/images/virtio-win.iso` (195MB) |
 
 ---
@@ -91,7 +100,7 @@ WindowsMaster/
    ```
 5. **Configurar dentro do Windows**:
    - Instalar programas institucionais
-   - Ativar WinRM (HTTP 5985)
+   - Ativar WinRM
    - Otimizar para HD
    - Configurar hostname, usuários, etc.
 6. **Preparar para FOG** (futuro):
@@ -110,26 +119,58 @@ FOG Server:      172.17.0.25
 VM (NAT):        10.0.2.x
 WinRM Alvo:      http://<vm-ip>:5985
 VNC:             localhost:5900
+Tailscale:       100.82.252.113 (Windows VM)
 ```
 
 ---
 
 ## 📦 Estado Atual (11/jun/2026)
 
+### VM e Infraestrutura
 - ✅ Repo criado e enviado para GitHub (público)
 - ✅ ISO oficial Windows 10 22H2 PT-BR baixada (5.5GB)
-- ✅ ISO copiada para `/var/lib/libvirt/images/`
-- ✅ VirtIO ISO presente (195MB)
-- ✅ VM `winmaster-base` **CRIADA E RODANDO** (Id: 5)
-- ✅ Disco de 60GB criado e montado
+- ✅ VM `winmaster-base` **CRIADA E RODANDO**
 - ✅ VNC ativo em `0.0.0.0:5900`
-- ✅ Scripts de preparação criados:
-  - `configure-winrm.ps1` — habilita WinRM HTTP 5985
-  - `enable-remote-desktop.ps1` — habilita RDP 3389
-  - `test-connectivity.sh` — testa portas
-  - `get-vm-ip.sh` — descobre IP da VM
-- ✅ AGENTS.md atualizado (este arquivo)
-- 🔄 **Status:** Windows 10 instalando (~14% em 14:45)
+- ✅ Tailscale instalado e configurado
+
+### Tentativas de Acesso Remoto
+
+#### Fase 1: QEMU Port Forwarding
+- ✅ Configurado hostfwd (porta 2222 → 22)
+- ✅ Porta 2222 ouvindo no host
+- ❌ SSH dentro do Windows: Connection refused
+- **Conclusão:** SSH Server não escutava na porta 22
+
+#### Fase 2: Tailscale VPN
+- ✅ Windows conectado (IP: 100.82.252.113)
+- ✅ Conectividade VPN funcionando
+- ❌ SSH: Permission denied (publickey,password)
+- **Conclusão:** Senha rejeitada
+
+#### Fase 3: Chaves SSH
+- ✅ Chave ed25519 gerada no Linux
+- ✅ Chave pública adicionada no Windows
+- ✅ `PubkeyAuthentication yes` configurado
+- ✅ Permissões do arquivo corretas
+- ❌ SSH: Permission denied (publickey)
+- **Conclusão:** Windows rejeita chave (possível problema de formato/encoding)
+
+### Scripts Criados
+
+| Script | Propósito | Status |
+|--------|-----------|--------|
+| `shared/scripts/win10-configure-all.ps1` | OpenSSH + WinRM + RDP | ✅ Criado |
+| `shared/scripts/diagnose-ssh.ps1` | Diagnóstico completo | ✅ Criado |
+| `scripts/setup-shared-folder.sh` | VirtIO-9P mount | ✅ Criado |
+| `debug_site.py` | Web console para debug | ✅ Rodando (tmux) |
+
+### Debug Tools
+
+| Tool | URL/Comando | Status |
+|------|-------------|--------|
+| Debug Console | http://localhost:8888 | ✅ Rodando em tmux |
+| ngrok HTTP | https://crumpet-scouring-self.ngrok-free.dev | ✅ Ativo |
+| Tailscale | `tailscale status` | ✅ Funcionando |
 
 ---
 
@@ -143,40 +184,42 @@ VNC:             localhost:5900
 - **SLiRP (NAT)** — VM acessa internet, mas não tem IP na rede 172.17
 - **30+ máquinas com HD** (não SSD) — otimizar imagem para HD
 - **Repositório só tem código** — imagem capturada via FOG
+- **Tailscale** — VPN para acesso remoto confiável (substitui port forwarding problemático)
 
 ---
 
 ## 🚀 Próximos Passos Imediatos
 
-1. ✅ VM rodando — aguardar instalação do Windows 10 terminar
-2. ✅ Acessar VNC (`vncviewer localhost:5900`) — você já está visualizando
-3. ⏳ Aguardar auto-logon como Administrador (senha: `Admin123!`)
-4. ⏳ Executar scripts PowerShell:
-   - `configure-winrm.ps1` → WinRM HTTP 5985
-   - `enable-remote-desktop.ps1` → RDP 3389
-5. ⏳ Descobrir IP da VM (`ipconfig` no Windows)
-6. ⏳ Testar conectividade com `test-connectivity.sh <IP>`
-7. ⏳ Instalar programas institucionais
-8. ⏳ Otimizar para HD + sysprep
-9. ⏳ Capturar via FOG
+### Amanhã: Continuar Debug SSH
 
-## 📝 Scripts Prontos para Execução
+1. **Verificar logs do SSH Server**
+   ```powershell
+   Get-Content C:\ProgramData\ssh\logs\sshd.log -Tail 50
+   Get-WinEvent -LogName "OpenSSH/Operational" -MaxEvents 30
+   ```
 
-Assim que o Windows subir e você fizer login:
+2. **Testar com chave RSA** (mais compatível com Windows)
+   ```bash
+   ssh-keygen -t rsa -b 4096 -f ~/.ssh/winmaster-rsa -N ""
+   # Copiar chave pública para Windows
+   ```
 
-```powershell
-# No PowerShell como Administrador:
-.\configure-winrm.ps1
-.\enable-remote-desktop.ps1
-```
+3. **Verificar formato do authorized_keys**
+   - Encoding: UTF-8 (sem BOM)
+   - Line endings: LF (não CRLF)
 
-```bash
-# No host Linux (descobrir IP):
-./scripts/get-vm-ip.sh
+4. **Verificar ListenAddress no sshd_config**
+   ```powershell
+   Get-Content C:\ProgramData\ssh\sshd_config | findstr ListenAddress
+   ```
 
-# Testar portas:
-./scripts/test-connectivity.sh <IP-DA-VM>
-```
+### Objetivo Final
+
+- ✅ Acesso SSH via Tailscale (100.82.252.113)
+- ⏳ WinRM HTTP 5985
+- ⏳ RDP porta 3389
+- ⏳ Pasta `shared/` montada via VirtIO-9P
+- ⏳ Deploy via FOG Project
 
 ---
 
@@ -187,10 +230,11 @@ Sempre que:
 - Mudar fluxo de trabalho
 - Tomar decisão arquitetural
 - Alterar stack ou rede
+- Tentar nova abordagem de acesso remoto
 
 → **Edite este arquivo** e adicione a seção correspondente.
 
 ---
 
 **Última atualização:** 11/jun/2026 — Deivison Santana  
-**Status:** Pronto para criar a VM e iniciar a instalação automatizada.
+**Status:** SSH via Tailscale configurado, chave pública instalada, aguardando debug de autenticação
